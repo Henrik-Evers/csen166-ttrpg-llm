@@ -18,6 +18,7 @@ frm_play = None
 files = {}
 
 
+# Draws and controls the menu.
 def menu():
     global frm_menu, frm_play
 
@@ -48,11 +49,12 @@ def menu():
         
         files[f_path] = {'path': path}
         
-
+        # Frame for this row
         frm_tmp = Frame(frm_filelist, padding=10)
         frm_tmp.grid(column=0, row=len(files))
         Label(frm_tmp, text=path).grid(column=0, row=0)
         
+        # PDFs need to have a toggle for if they're converted to text or an image.
         if f_path.endswith('.pdf'):
             files[f_path]['mode'] = 'txt'
             files[f_path]['i'] = BooleanVar()
@@ -65,6 +67,7 @@ def menu():
 
         files[f_path]['frame'] = frm_tmp
 
+    # Unselect a file. Deletes it from the project directory.
     def remove_file(path):
         global files
 
@@ -74,12 +77,14 @@ def menu():
         files[path]['frame'].grid_remove()
         del files[path]
 
+    # Frame for the file loading buttons
     frm_files = Frame(frm_menu, padding=10)
     frm_files.grid(column=0, row=2)
     Button(frm_files, text="Load Rules Document", command=lambda: add_file(RULES_PATH)).grid(column=0, row=0)
     Button(frm_files, text="Load Adventure Document", command=lambda: add_file(ADVENTURE_PATH)).grid(column=1, row=0)
     Button(frm_files, text="Load Character Document", command=lambda: add_file(CHARS_PATH)).grid(column=2, row=0)
 
+    # Frame for the list of selected files
     frm_filelist = Frame(frm_menu, padding=10)
     frm_filelist.grid(column=0, row=3)
 
@@ -90,9 +95,11 @@ def menu():
             add_file(sub_path, file_path)
 
 
+# Draws and controls the interaction with the app.
 def play():
     global frm_menu, frm_play, files
 
+    # Copy over any loaded files that aren't in the project directory.
     for f_path in files:
         try:
             path = f_path
@@ -100,16 +107,11 @@ def play():
                 ht = os.path.split(f_path)
                 if files[f_path]['i'].get() and not ht[1].startswith('i'):
                     path = os.path.join(ht[0], 'i' + ht[1])
-                    print("1")
-                    print(path)
                 elif ht[1].startswith('i'):
                     path = os.path.join(ht[0], ht[1][1:])
-                    print("2")
-                    print(path)
             if files[f_path]['path'] != path:
                 print('Copying: ' + f_path)
                 print('To: ' + path)
-                print(files[f_path])
                 shutil.copy(files[f_path]['path'], path)
         except Exception as e:
             print('Could not copy: ' + files[f_path]['path'])
@@ -130,12 +132,14 @@ def play():
 
     root.update()
 
+    # Trigger a message send
     def enter(event=None):
         msg = input_txt.get('1.0', 'end')
         input_txt.delete('1.0', 'end')
         submit_msg(msg)
     root.bind('<Return>', enter)
 
+    # Send a message to the LLM and stream the response to output_txt
     def submit_msg(msg, show_prompt=True, show_response=True):
 
         if show_prompt:
@@ -147,6 +151,12 @@ def play():
         for part in app.send_msg(msg):
             if part == -1:
                 root.destroy()
+                return
+            if part == 0:
+                output_txt.config(state=NORMAL)
+                output_txt.insert(END, 'New save created. Check the project directory /saves.')
+                output_txt.insert(END, '\n>>')
+                output_txt.config(state=DISABLED)
                 return
             if show_response:
                 output_txt.config(state=NORMAL)

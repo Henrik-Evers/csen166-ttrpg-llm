@@ -1,18 +1,22 @@
 from ollama import chat
 import input_processing
+import os
 
 MODEL_NAME = 'app-model'
 CHARSHEET_MODEL = 'app-charsheet-reader'
 
+SAVE_PATH = './save.txt'
+
 
 # Get the environment ready to the point where the user can start sending messages.
 def setup():
-    global messages
+    global messages, chars_images
 
     # Collect information from the files provided in the data subdirectory.
     (rules_data, rules_images,
     adventure_data, adventure_images,
-    chars_data, chars_images) = input_processing.process()
+    chars_data, char_images) = input_processing.process()
+    chars_images = char_images
 
 
     # Helper function to perform a chat request on demand.
@@ -72,27 +76,29 @@ def setup():
         })
 
 
-    # Initial input to give the user an introduction
-    # msg = {
-    #     'role': 'user',
-    #     'content': 'I am ready to start playing! Can you give a quick summary of the player character(s) and adventure, then get us started?'
-    # }
-    # messages += [msg, do_chat([*messages, msg], model=MODEL_NAME)]
-
-
 # Perform a prompt and deliver the response.
 def send_msg(user_input):
-    global messages
+    global messages, chars_images
 
     # Commands
     if user_input.startswith('/'):
         if user_input.startswith('/exit'):
             yield -1
+        if user_input.startswith('/save'):
+            if os.path.exists(SAVE_PATH):
+                os.remove(SAVE_PATH)
+            with open(SAVE_PATH, "w", encoding="utf-8") as save_file:
+                save_file.write(chat(MODEL_NAME, messages=[*messages, {'role': 'system', 'content': '''
+                                                                       Please summarize everything that has happened in this session as if you were going to hand control over to another dungeon master. Focus on key interactions, changes in the world, and plot development and character development. Make sure to include any consequences of these events.
+                                                                       '''}])['message']['content'])
+            yield 0
+        if user_input == '/help' or user_input =='/':
+            yield 'The following slash commands are available:\n/help to see this message.\n/save to save a summary of the session to the project directory/saves.\n/exit to close the program.'
     
     # Normal message
     else:
         response = ''
-        for part in chat(MODEL_NAME, messages=[*messages, {'role': 'user', 'content': user_input}], stream=True):
+        for part in chat(MODEL_NAME, messages=[*messages, {'role': 'user', 'content': user_input, 'images': chars_images}], stream=True):
             yield part['message']['content']
             response += part['message']['content']
 
