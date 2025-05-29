@@ -4,11 +4,12 @@ from tkinter.filedialog import askopenfilename
 from tkinter.scrolledtext import ScrolledText
 import os
 import shutil
+import app
 
-D_PATH = './data'
-RULES_PATH = 'rules'
-ADVENTURE_PATH = 'adventure'
-CHARS_PATH = 'characters'
+D_PATH = app.input_processing.D_PATH
+RULES_PATH = app.input_processing.RULES_PATH
+ADVENTURE_PATH = app.input_processing.ADVENTURE_PATH
+CHARS_PATH = app.input_processing.CHARS_PATH
 
 
 root = Tk(className=' LLM TTRPG')
@@ -106,9 +107,10 @@ def play():
                     print("2")
                     print(path)
             if files[f_path]['path'] != path:
+                print('Copying: ' + f_path)
+                print('To: ' + path)
+                print(files[f_path])
                 shutil.copy(files[f_path]['path'], path)
-            elif os.path.realpath(os.path.dirname(os.path.dirname(files[f_path]['path']))) == os.path.realpath(D_PATH):
-                os.remove(files[f_path]['path'])
         except Exception as e:
             print('Could not copy: ' + files[f_path]['path'])
             print(e)
@@ -120,11 +122,13 @@ def play():
     frm_play.grid()
     output_txt = ScrolledText(frm_play, wrap='word', width=150)
     output_txt.grid(column=0, row=0, columnspan=2)
-    output_txt.insert(END, "This is some sample text.\n")
+    output_txt.insert(END, '>>')
     output_txt.config(state=DISABLED)
     input_txt = ScrolledText(frm_play, wrap='word', height=4, width=150)
     input_txt.grid(column=0, row=1)
     Button(frm_play, text="Send", command=lambda: enter(), width=10).grid(column=1, row=1)
+
+    root.update()
 
     def enter(event=None):
         msg = input_txt.get('1.0', 'end')
@@ -132,9 +136,33 @@ def play():
         submit_msg(msg)
     root.bind('<Return>', enter)
 
+    def submit_msg(msg, show_prompt=True, show_response=True):
 
-def submit_msg(msg):
-    print(msg)
+        if show_prompt:
+            output_txt.config(state=NORMAL)
+            output_txt.insert(END, msg)
+            output_txt.config(state=DISABLED)
+            root.update()
+
+        for part in app.send_msg(msg):
+            if part == -1:
+                root.destroy()
+                return
+            if show_response:
+                output_txt.config(state=NORMAL)
+                output_txt.insert(END, part)
+                output_txt.config(state=DISABLED)
+                output_txt.see(END)
+                root.update()
+        
+        if show_prompt or show_response:
+            output_txt.config(state=NORMAL)
+            output_txt.insert(END, '\n>>')
+            output_txt.config(state=DISABLED)
+            output_txt.see(END)
+    
+    app.setup()
+    submit_msg('I am ready to start playing! Can you give a quick summary of the player character(s) and adventure, then get us started?', show_prompt=False)
 
 
 menu()

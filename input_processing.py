@@ -27,14 +27,17 @@ def get_data_from_dir(sub_path):
                 images.append(file_path)
             
             if file_path.endswith('.pdf'):
-                if file_path.startswith('i'): # Convert to images if marked
+                print('Converting file: ' + file_path)
+                if os.path.basename(file_path).startswith('i'): # Convert to images if marked
+                    print('to image')
                     imgs = convert_from_path(file_path, poppler_path=os.getenv('POPPLER_PATH'))
                     for i in range(len(imgs)):
                         i_path = file_path[:-4] + str(i) + '.jpg'
                         imgs[i].save(i_path, 'JPEG')
-                        images += i_path
+                        images.append(i_path)
                     os.remove(file_path)
                 else: # Default to text because it's faster
+                    print('to text')
                     pdf_document = fitz.open(file_path)
                     with open(file_path[:-4] + '.txt', "w", encoding="utf-8") as text_file:
                         for page_num in range(pdf_document.page_count):
