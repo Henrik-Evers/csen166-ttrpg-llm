@@ -76,7 +76,7 @@ def setup():
         })
 
 
-# Perform a prompt and deliver the response.
+# Perform a prompt and deliver the response as a stream. For using with the GUI.
 def send_msg(user_input):
     global messages, chars_images
 
@@ -109,6 +109,7 @@ def send_msg(user_input):
         ]
 
 
+# For running in a CLI.
 def main():
     global messages
 
