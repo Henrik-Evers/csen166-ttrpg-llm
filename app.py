@@ -140,7 +140,3 @@ def main():
 if __name__ == "__main__":
     setup()
     main()
-
-# TODO:
-# - More commands beyond just /exit would be great. Maybe we can use /load to load new documents from the directories, and /save to save the changes from this session to a file? For the save, send a prompt to the thing but then pipe the output to a file rather than printing.
-# - Fine-tune the system prompts and parameters to make it better.
