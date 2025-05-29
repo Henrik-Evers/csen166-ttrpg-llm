@@ -1,32 +1,14 @@
 from ollama import chat
-import os
+import input_processing
 
 MODEL_NAME = 'app-model'
 CHARSHEET_MODEL = 'app-charsheet-reader'
 
 
 # Collect information from the files provided in the data subdirectory.
-D_PATH = './data'
-RULES_PATH = 'rules'
-ADVENTURE_PATH = 'adventure'
-CHARS_PATH = 'characters'
-
-def get_data_from_dir(sub_path):
-    data = ''
-    images = []
-    for filename in os.listdir(os.path.join(D_PATH, sub_path)):
-        file_path = os.path.join(D_PATH, sub_path, filename)
-        if os.path.isfile(file_path):  # Ensure it's a file, not a subdirectory
-            if file_path.endswith('.txt'):
-                with open(file_path, 'r', errors='ignore') as file:
-                    data += file.read()
-            if file_path.endswith('.png') or file_path.endswith('jpeg') or file_path.endswith('jpg'):
-                images.append(file_path)
-    return data, images
-
-rules_data, rules_images = get_data_from_dir(RULES_PATH)
-adventure_data, adventure_images = get_data_from_dir(ADVENTURE_PATH)
-chars_data, chars_images = get_data_from_dir(CHARS_PATH)
+(rules_data, rules_images,
+adventure_data, adventure_images,
+chars_data, chars_images) = input_processing.process()
 
 
 # Helper function to perform a chat request on demand.
@@ -43,10 +25,10 @@ def do_chat(messages, model=MODEL_NAME, show=True):
     ]
 
 
-# This gives some initial messages to set the stage
-# We can't include file contents in the Modelfile, so we include here.
+# Message history
 messages = []
 
+# Set initial message history / pre-emptive prompts to include input data.
 if rules_data != '' or rules_images != []:
     messages.append({
         'role': 'system',
@@ -94,28 +76,34 @@ msg = {
 }
 messages += [msg, do_chat([*messages, msg], model=MODEL_NAME)]
 
-# Loop forever until the user says /exit.
+
+# Loop prompt -> response, until instructed to stop.
 print('Type /exit to terminate the program.')
 while True:
     user_input = input('>> ')
 
-    if user_input == '/exit':
-        break
+    # Commands
+    if user_input.startswith('/'):
+        if user_input == '/exit':
+            break
+    
+    # Normal message
+    else:
+        response = ''
+        for part in chat(MODEL_NAME, messages=[*messages, {'role': 'user', 'content': user_input, 'images': chars_images}], stream=True):
+            print(part['message']['content'], end='', flush=True)
+            response += part['message']['content']
+        print('')
 
-    response = ''
-    for part in chat(MODEL_NAME, messages=[*messages, {'role': 'user', 'content': user_input, 'images': chars_images}], stream=True):
-        print(part['message']['content'], end='', flush=True)
-        response += part['message']['content']
-    print()
-
-    # Add the prompt and response to the history
-    messages += [
-        {'role': 'user', 'content': user_input},
-        {'role': 'assistant', 'content': response},
-    ]
+        # Add the prompt and response to the history
+        messages += [
+            {'role': 'user', 'content': user_input},
+            {'role': 'assistant', 'content': response},
+        ]
 
 
 # TODO:
 # - More commands beyond just /exit would be great. Maybe we can use /load to load new documents from the directories, and /save to save the changes from this session to a file? For the save, send a prompt to the thing but then pipe the output to a file rather than printing.
 # - Fine-tune the system prompts and parameters to make it better.
 # - Include the file conversion within this script. Will also need to convert PDFs to PNGs, at least temporarily, to be passed to the model.
+# - When uploading files by GUI - mark whether rules, adventure, or character. Have it check and, if it's a PDF, mark whether text-heavy or image-heavy (to control how it's converted).

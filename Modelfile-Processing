@@ -1,7 +1,7 @@
 # ollama create <model_name> -f Modelfile
 
 FROM gemma3:4b
-PARAMETER temperature 0.7
+PARAMETER temperature 0.4
 PARAMETER num_ctx 2048
 PARAMETER num_predict -1
 
