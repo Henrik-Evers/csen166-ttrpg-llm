@@ -157,6 +157,7 @@ def play():
                 output_txt.insert(END, 'New save created. Check the project directory /saves.')
                 output_txt.insert(END, '\n>>')
                 output_txt.config(state=DISABLED)
+                output_txt.see(END)
                 return
             if show_response:
                 output_txt.config(state=NORMAL)
